@@ -5,10 +5,11 @@ from sstable import SSTable
 
 class KeyValueStore:
 
-    def __init__(self):
+    def __init__(self, wal_filename="wal.log", sstable_filename="sstable.json"):
         self.memtable = {}
-        self.wal = WriteAheadLog()
-        self.sstable = SSTable()
+        self.flush_threshold = 3
+        self.wal = WriteAheadLog(wal_filename)
+        self.sstable = SSTable(sstable_filename)
 
         self.recover()
 
@@ -31,6 +32,8 @@ class KeyValueStore:
     def put(self, key, value):
         self.wal.append("PUT", key, value)
         self.memtable[key] = value
+        if len(self.memtable) >= self.flush_threshold:
+            self.flush()
 
     def get(self, key):
         return self.memtable.get(key)
