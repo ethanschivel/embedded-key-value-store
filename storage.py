@@ -44,4 +44,5 @@ class KeyValueStore:
 
     def flush(self):
         self.sstable.write(self.memtable)
+        self.wal.clear()
         print("MemTable saved to disk!")

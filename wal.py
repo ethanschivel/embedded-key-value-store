@@ -31,3 +31,7 @@ class WriteAheadLog:
             pass
 
         return records
+
+    def clear(self):
+        with open(self.filename, "w") as file:
+            file.truncate(0)
