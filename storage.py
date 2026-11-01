@@ -1,55 +1,39 @@
-
+import os
 from wal import WriteAheadLog
 from sstable import SSTable
 
 
 class KeyValueStore:
-
-    def __init__(self, wal_filename="wal.log", sstable_filename="sstable.json"):
-        self.memtable = {}
-        self.flush_threshold = 3
-        self.pending_writes = 0
-
+    def __init__(self, wal_filename='wal.log', sstable_filename='sstable.json', flush_threshold=3):
+        if flush_threshold < 1:
+            raise ValueError('flush_threshold must be positive')
+        self.flush_threshold = flush_threshold
         self.wal = WriteAheadLog(wal_filename)
         self.sstable = SSTable(sstable_filename)
-
-        self.recover()
-
-    def recover(self):
         self.memtable = self.sstable.read()
         records = self.wal.recover()
-
         for record in records:
-            operation = record["operation"]
-            key = record["key"]
-            value = record.get("value")
-
-            if operation == "PUT":
-                self.memtable[key] = value
-
-            elif operation == "DELETE":
-                self.memtable.pop(key, None)
-
+            if record['operation'] == 'PUT':
+                self.memtable[record['key']] = record['value']
+            elif record['operation'] == 'DELETE':
+                self.memtable.pop(record['key'], None)
         self.pending_writes = len(records)
 
     def put(self, key, value):
-        self.wal.append("PUT", key, value)
+        self.wal.append('PUT', key, value)
         self.memtable[key] = value
-
-        self.pending_writes += 1
-
-        if self.pending_writes >= self.flush_threshold:
-            self.flush()
+        self._changed()
 
     def get(self, key):
         return self.memtable.get(key)
 
     def delete(self, key):
-        self.wal.append("DELETE", key)
+        self.wal.append('DELETE', key)
         self.memtable.pop(key, None)
+        self._changed()
 
+    def _changed(self):
         self.pending_writes += 1
-
         if self.pending_writes >= self.flush_threshold:
             self.flush()
 
@@ -57,5 +41,3 @@ class KeyValueStore:
         self.sstable.write(self.memtable)
         self.wal.clear()
         self.pending_writes = 0
-
-        print("MemTable saved to disk!")

@@ -1,37 +1,36 @@
-
 # Embedded Key-Value Storage Engine
 
-A Python-based embedded key-value storage engine built from scratch to explore database internals and LSM-tree architecture.
+A small persistent key-value database written in Python. Supports string keys and JSON-serializable values, in-memory reads, write-ahead logging (WAL), automatic checkpoints, and recovery on restart.
 
-## Current Features
+## Quick start
 
-- In-memory key-value storage using a MemTable
-- PUT, GET, and DELETE operations
-- Write-Ahead Log (WAL) for recording changes
-- Data recovery from the WAL after restarting
-- Sorted key-value storage using JSON files
-- Manual MemTable flushing to disk
+Requires Python 3.9+; no third-party dependencies.
 
-## Technologies
+```python
+from storage import KeyValueStore
 
-- Python
-- JSON
-- File I/O
-
-## Run
-
-```bash
-python3 main.py
+db = KeyValueStore('wal.log', 'sstable.json', flush_threshold=3)
+db.put('apple', 10)
+print(db.get('apple'))  # 10
+db.delete('apple')
+print(db.get('apple'))  # None
 ```
 
-## Project Status
+## Architecture
 
-Work in progress.
+1. `put` and `delete` append a JSON record to the WAL and fsync before modifying memory.
+2. Reads use an in-memory dictionary.
+3. Every `flush_threshold` changes, the engine writes a full JSON snapshot to a temporary file, fsyncs it, and atomically replaces the previous snapshot.
+4. After snapshot replacement, the WAL is cleared.
+5. On restart, the snapshot is loaded and remaining WAL entries are replayed.
 
-Planned improvements:
-- Multiple immutable SSTables
-- Automatic MemTable flushing
-- Tombstones for deleted keys
-- WAL checkpointing
-- Background compaction
-- Automated tests and performance benchmarks
+## Test
+
+```bash
+python3 -m unittest -v test_storage.py
+python3 benchmark.py
+```
+
+## Limitations
+
+Educational single-process engine, not production-ready. Snapshots rewrite the entire database; it does not implement immutable sorted SSTables, compaction, concurrency control, multi-process locking, or transaction isolation. The WAL is JSON-lines and its recovery tolerates an incomplete final line, but the log is not protected by checksums or generations. Crash/power-loss behavior around snapshot replacement and WAL truncation has not been exhaustively fault-injection tested. Use only one writer, and do not store important data.
