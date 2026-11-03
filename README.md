@@ -1,5 +1,7 @@
 # Embedded Key-Value Storage Engine
 
+![tests](https://github.com/ethanschivel/embedded-key-value-store/actions/workflows/tests.yml/badge.svg)
+
 A lightweight, persistent key-value storage engine built from scratch in Python.
 
 This project explores fundamental database concepts, including write-ahead logging (WAL), in-memory indexing, disk persistence, automatic checkpointing, and crash recovery.
